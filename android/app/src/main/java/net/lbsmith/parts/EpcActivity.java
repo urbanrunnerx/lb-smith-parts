@@ -24,10 +24,10 @@ public class EpcActivity extends Activity {
   try(java.io.InputStream in=getAssets().open("epc-adapter.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);adapter=out.toString("UTF-8");}catch(Exception e){finish();return;}
   LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(16,29,50));
   root.setOnApplyWindowInsetsListener((v,i)->{v.setPadding(i.getSystemWindowInsetLeft(),i.getSystemWindowInsetTop(),i.getSystemWindowInsetRight(),i.getSystemWindowInsetBottom());return i;});
-  TextView title=new TextView(this);title.setText("EPC LOOKUP  ·  "+vin);title.setTextColor(Color.WHITE);title.setTextSize(13);title.setPadding(16,10,16,4);root.addView(title);
-  status=new TextView(this);status.setTextColor(Color.rgb(197,215,245));status.setTextSize(12);status.setPadding(16,4,16,8);status.setText("Sign in to Snap-on below. Load VIN → search a base → open a location → review parts.");root.addView(status);
-  LinearLayout bar=new LinearLayout(this);bar.setPadding(8,0,8,4);bar.setBackgroundColor(Color.WHITE);
-  bases=new Spinner(this);bases.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,values));bar.addView(bases,new LinearLayout.LayoutParams(0,48,1));
+  TextView title=new TextView(this);title.setText("EPC LOOKUP  ·  "+vin);title.setTextColor(Color.WHITE);title.setTextSize(13);title.setPadding(dp(16),dp(10),dp(16),dp(4));root.addView(title);
+  status=new TextView(this);status.setTextColor(Color.rgb(197,215,245));status.setTextSize(12);status.setPadding(dp(16),dp(4),dp(16),dp(8));status.setText("Sign in to Snap-on below. Load VIN → search a base → open a location → review parts.");root.addView(status);
+  LinearLayout bar=new LinearLayout(this);bar.setPadding(dp(8),0,dp(8),dp(4));bar.setBackgroundColor(Color.WHITE);
+  bases=new Spinner(this);bases.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,values));bar.addView(bases,new LinearLayout.LayoutParams(0,dp(48),1));
   addButton(bar,"Load VIN",()->action("vin"));addButton(bar,"Search",()->action("search"));addButton(bar,"Review parts",()->action("capture"));root.addView(bar);
   web=new WebView(this);web.setBackgroundColor(Color.WHITE);WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(false);s.setAllowContentAccess(false);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);s.setUseWideViewPort(true);s.setLoadWithOverviewMode(true);s.setBuiltInZoomControls(true);s.setDisplayZoomControls(false);
   // EPC is designed for a desktop-width catalog; allow pinch zoom on the phone.
@@ -47,7 +47,8 @@ public class EpcActivity extends Activity {
   if(state==null||web.restoreState(state)==null)web.loadUrl("https://snaponepc.com/epc/");
  }
  private boolean allowed(Uri u){String h=u.getHost();return "https".equals(u.getScheme())&&h!=null&&(h.equals("snaponepc.com")||h.endsWith(".snaponepc.com"));}
- private void addButton(LinearLayout bar,String label,Runnable run){Button b=new Button(this);b.setText(label);b.setTextSize(11);b.setAllCaps(false);b.setMinWidth(0);b.setMinimumWidth(0);b.setPadding(9,0,9,0);bar.addView(b,new LinearLayout.LayoutParams(-2,48));b.setOnClickListener(v->run.run());}
+ private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
+ private void addButton(LinearLayout bar,String label,Runnable run){Button b=new Button(this);b.setText(label);b.setTextSize(11);b.setAllCaps(false);b.setMinWidth(0);b.setMinimumWidth(0);b.setPadding(dp(9),0,dp(9),0);bar.addView(b,new LinearLayout.LayoutParams(-2,dp(48)));b.setOnClickListener(v->run.run());}
  private void action(String command){
   if(web.getUrl()==null||!allowed(Uri.parse(web.getUrl()))){status.setText("Open the signed-in Snap-on catalog first.");return;}
   try{JSONObject req=new JSONObject().put("vin",vin).put("base",bases.getSelectedItem().toString());
