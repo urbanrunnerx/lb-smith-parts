@@ -23,6 +23,8 @@ public class OfflineSmokeTest {
  @Test public void offlineCatalogAndGroupedSearchLoadInAndroid()throws Exception{
   try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
    until(s,"document.querySelector('#baseCount')?.textContent","\"15,700\"");
+   js(s,"localStorage.clear();window.__beforeReload=true;location.reload()");
+   until(s,"window.__beforeReload===undefined && document.querySelector('#baseCount')?.textContent==='15,700'","true");
    assertEquals("\"object\"",js(s,"typeof PartsNative"));
    js(s,"document.querySelector('[data-query=\"purge valve\"]').click()");
    until(s,"document.querySelectorAll('#results .part-card').length","1");

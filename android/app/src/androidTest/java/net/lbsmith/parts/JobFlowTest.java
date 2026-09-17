@@ -13,10 +13,11 @@ import java.util.concurrent.atomic.AtomicReference;
 public class JobFlowTest {
  private String js(ActivityScenario<MainActivity> s,String code)throws Exception{CountDownLatch done=new CountDownLatch(1);AtomicReference<String> out=new AtomicReference<>();s.onActivity(a->a.getWebView().evaluateJavascript(code,v->{out.set(v);done.countDown();}));assertTrue(done.await(10,TimeUnit.SECONDS));return out.get();}
  private void until(ActivityScenario<MainActivity> s,String code,String expected)throws Exception{long end=System.currentTimeMillis()+30000;String last="";while(System.currentTimeMillis()<end){last=js(s,code);if(expected.equals(last))return;Thread.sleep(200);}assertEquals(expected,last);}
+ private void reload(ActivityScenario<MainActivity> s)throws Exception{js(s,"window.__beforeReload=true;location.reload()");until(s,"window.__beforeReload===undefined && document.querySelector('#baseCount')?.textContent==='15,700'","true");}
  @Test public void upgradeNativeReturnMultipleJobsAndVinChangesPersist()throws Exception{
   try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
    until(s,"document.querySelector('#baseCount')?.textContent","\"15,700\"");
-   js(s,"localStorage.clear();localStorage.setItem('lbsmith-parts-v1-worksheet',JSON.stringify({job:'Legacy RO',vin:'1M8GDM9AXKP042788',rows:[{id:'fixture-hub',name:'Fixture hub',bases:['1104'],qty:2,note:'Preserved counter note'}]}));location.reload()");
+   js(s,"localStorage.clear();localStorage.setItem('lbsmith-parts-v1-worksheet',JSON.stringify({job:'Legacy RO',vin:'1M8GDM9AXKP042788',rows:[{id:'fixture-hub',name:'Fixture hub',bases:['1104'],qty:2,note:'Preserved counter note'}]}))");reload(s);
    until(s,"document.querySelector('#vehicleBar')?.innerText.includes('Legacy RO')","true");
    js(s,"document.querySelector('#activeJob').click()");
    assertEquals("true",js(s,"document.querySelector('#jobRows').innerText.includes('Fixture hub')"));
@@ -28,11 +29,11 @@ public class JobFlowTest {
    assertEquals("2",js(s,"document.querySelectorAll('[data-switch-job]').length"));
    js(s,"Array.from(document.querySelectorAll('[data-switch-job]')).find(b=>b.innerText.includes('Legacy RO')).click();document.querySelector('#jobVin').value='1M8GDM9A0KP042788';document.querySelector('#jobVin').dispatchEvent(new Event('input',{bubbles:true}))");
    assertEquals("true",js(s,"document.querySelector('.selection').innerText.includes('RECHECK')"));
-   js(s,"location.reload()");until(s,"document.querySelector('#vehicleBar')?.innerText.includes('1M8GDM9A0KP042788')","true");
+   reload(s);until(s,"document.querySelector('#vehicleBar')?.innerText.includes('1M8GDM9A0KP042788')","true");
    js(s,"document.querySelector('#activeJob').click()");
    assertEquals("true",js(s,"document.querySelector('.selection').innerText.includes('RECHECK')"));
    assertEquals("\"Preserved counter note\"",js(s,"document.querySelector('[data-job-note2]').value"));
-   js(s,"localStorage.clear();location.reload()");
+   js(s,"localStorage.clear()");reload(s);
   }
  }
 }
