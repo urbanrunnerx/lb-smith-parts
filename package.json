@@ -1,0 +1,1 @@
+{"name":"lb-smith-parts","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node tests/catalog.test.mjs","catalog":"python scripts/build-catalog.py","serve":"python -m http.server 8097 --directory dist"}}

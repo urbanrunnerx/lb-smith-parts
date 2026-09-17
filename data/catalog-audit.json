@@ -1,0 +1,32 @@
+{
+  "stats": {
+    "baseNumbers": 15700,
+    "partFamilies": 2441,
+    "detailedFamilies": 2094,
+    "broadFamilies": 347,
+    "packagingBases": 15171,
+    "legacyBases": 690,
+    "epcBases": 1246,
+    "bodyPrefixCollapsedCount": 8947,
+    "sourceServiceRows": 200239,
+    "categories": {
+      "Body & interior": 574,
+      "Brakes": 144,
+      "Climate control": 187,
+      "Electrical": 315,
+      "Engine & cooling": 300,
+      "Exhaust & chassis": 109,
+      "Fuel & emissions": 232,
+      "Steering & suspension": 177,
+      "Transmission & driveline": 318,
+      "Wheels & tires": 85
+    }
+  },
+  "sourceSha256": "08f94c232aa471c80ecf975aaeb3abee4696b59c8b18b81bc4357e46c5dc1208",
+  "excludedRows": {
+    "nonconventional_prefix": 13103,
+    "nonconventional_base": 173,
+    "missing_description": 10
+  },
+  "coverage": "Broad published Ford/Motorcraft snapshot plus saved EPC observations and historical references. Some packaging descriptions are generic. No claim of every Ford base number or VIN fitment."
+}
