@@ -6,6 +6,7 @@ ROOT=Path(__file__).resolve().parents[1]
 load=lambda p:json.loads((ROOT/p).read_text(encoding='utf-8'))
 pack=load('data/packaging-reference.json'); epc=load('data/epc-reference.json')
 specs=load('data/families.json'); evidence=defaultdict(list); legacy=defaultdict(list); observed=defaultdict(list)
+identities=load('data/family-identities.json')
 sources=[{'id':'packaging','name':pack['sourceName'],'url':pack['landingPage'],'download':pack['source'],'checkedAt':pack['retrievedAt'],'sha256':pack['sha256'],'scope':'Published packaging records, not a complete historical or VIN-fitment catalog.'},
  {'id':'epc','name':'Saved Snap-on EPC observations','url':epc['source'],'checkedAt':epc['checkedAt'],'scope':epc['coverage']},
  {'id':'legacy','name':'Public Ford Basic Numbers reference','url':'https://www.terminator-cobra.com/FordBasicNumber.pdf','checkedAt':'undated','scope':'Historical quick reference; exact vehicle applicability varies.'},
@@ -19,6 +20,7 @@ for b,x in by_pack.items():
  evidence[b].insert(0,{'source':'packaging','descriptions':x['descriptions'],'examples':x['examples'],'serviceCount':x['serviceCount']})
 overrides={b:s for s in specs for b in s['bases']}
 generic={'kit','module','electronic module','cover','plate','bracket','panel','pump','actuator','seal','gasket','switch','valve','clip','motor','tube','hose','control','wiring','wire','sensor','vta','upc1','support','reinforcement','retainer','housing','screw','bolt','nut','washer','pin','spring','shaft','gear','ring','pad','trim','moulding','molding','insulator','lever','rod','link','cable','cap','plug','spacer','connector','seal kit','cover kit','bracket kit'}
+generic.update({'weatherstrip','handle','latch','shield','member','extension','strap','flange','guide','bearing','bushing','grommet','stop','mount','reservoir','sleeve','sealant','tape','fitting','hook','stud','hub'})
 def norm(s):
  s=s.lower().replace('a/c','ac').replace('vapour','vapor').replace('moulding','molding')
  s=re.sub(r'\b(assy|assembly|asy)\b','',s)
@@ -66,13 +68,24 @@ for b in sorted(evidence):
   cat=system(name,b); aliases=[]; note=''
  key=norm(name)+' | '+cat
  g=families.setdefault(key,{'id':hashlib.sha1(key.encode()).hexdigest()[:12],'name':name,'category':cat,'broad':broad,'aliases':set(),'note':note,'bases':[]})
+ if custom:
+  g.update(name=custom['name'],category=custom['category'],broad=False)
+  if custom.get('note'):g['note']=custom['note']
+  g['preferredId']=identities.get(custom['bases'][0],g['id'])
  g['aliases'].update(names+aliases)
  # Packaging descriptions stay in evidence; generic terms must not crowd search matches.
  if not names and b in by_pack: g['aliases'].update(x['name'] for x in by_pack[b]['descriptions'])
  if b=='9D289': evidence[b].append({'source':'purge','description':'Vapor canister purge valve supplied as a fuel vapor separator tube assembly','examples':['K2GZ9D289A']})
- g['bases'].append({'number':b,'evidence':evidence[b]})
+ g['bases'].append({'number':b,'label':custom.get('labels',{}).get(b,'') if custom else '', 'evidence':evidence[b]})
 parts=sorted(families.values(),key=lambda x:(x['broad'],x['name'].lower(),x['category']))
-for g in parts:g['aliases']=sorted(g['aliases'])
+used_ids=set()
+for g in parts:
+ g['aliases']=sorted(g['aliases'])
+ prior=sorted({identities[b['number']] for b in g['bases'] if b['number'] in identities})
+ candidate=g.pop('preferredId',None) or (prior[0] if prior else g['id'])
+ if candidate in used_ids:candidate=g['id']
+ g['id']=candidate;used_ids.add(candidate)
+ g['legacyIds']=[i for i in prior if i!=candidate]
 allbases={b['number'] for p in parts for b in p['bases']}
 # This additional diagnostic shows count without the first two body-style digits.
 # It is not used for decoding or identity, and never claims shortened bases are interchangeable.
@@ -81,7 +94,7 @@ stats={'baseNumbers':len(allbases),'partFamilies':len(parts),'detailedFamilies':
 assert len(allbases)>=3000
 assert len(allbases)==sum(len(p['bases']) for p in parts), 'Each exact base belongs to one family'
 assert len({(norm(p['name']),p['category']) for p in parts})==len(parts)
-out={'schemaVersion':1,'version':'1.0.0','updatedAt':'2026-09-17','stats':stats,'coverage':'Broad published Ford/Motorcraft snapshot plus saved EPC observations and historical references. Some packaging descriptions are generic. No claim of every Ford base number or VIN fitment.','sources':sources,'parts':parts}
+out={'schemaVersion':2,'version':'2.0.0','updatedAt':'2026-09-17','stats':stats,'coverage':'Broad published Ford/Motorcraft snapshot plus saved EPC observations and historical references. Some packaging descriptions are generic. No claim of every Ford base number or VIN fitment.','sources':sources,'parts':parts}
 (ROOT/'dist/catalog.json').write_text(json.dumps(out,separators=(',',':'),ensure_ascii=False)+'\n',encoding='utf-8')
 (ROOT/'data/catalog-audit.json').write_text(json.dumps({'stats':stats,'sourceSha256':pack['sha256'],'excludedRows':pack['excludedRows'],'coverage':out['coverage']},indent=2)+'\n')
 print(json.dumps(stats,indent=2))

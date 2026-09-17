@@ -31,10 +31,11 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
  public static final String ORIGIN="https://appassets.androidplatform.net";
  private WebView web;
+ private WebView printWeb;
  private ValueCallback<Uri[]> fileCallback;
  private String exportText;
  private final ExecutorService decoderExecutor=Executors.newSingleThreadExecutor();
- private static final int PICK_FILE=41, SAVE_FILE=42;
+ private static final int PICK_FILE=41, SAVE_FILE=42, EPC_LOOKUP=43;
  public WebView getWebView(){return web;}
 
  @SuppressLint({"SetJavaScriptEnabled"})
@@ -77,6 +78,16 @@ public class MainActivity extends Activity {
  }
  private void toast(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
  public final class LocalTools {
+  @JavascriptInterface public void printJob(String text){if(text==null||text.length()>200000)return;runOnUiThread(()->{if(printWeb!=null)printWeb.destroy();printWeb=new WebView(MainActivity.this);printWeb.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){android.print.PrintManager pm=(android.print.PrintManager)getSystemService(PRINT_SERVICE);pm.print("L.B. Smith Parts job",v.createPrintDocumentAdapter("L.B. Smith Parts job"),new android.print.PrintAttributes.Builder().build());}});printWeb.loadDataWithBaseURL(null,"<html><head><meta charset='utf-8'><style>body{font:12px sans-serif;padding:24px}pre{white-space:pre-wrap;line-height:1.6}</style></head><body><h2>L.B. Smith Parts</h2><pre>"+android.text.TextUtils.htmlEncode(text)+"</pre></body></html>","text/html","UTF-8",null);});}
+  @JavascriptInterface public void openEpc(String payload){
+   try{JSONObject p=new JSONObject(payload);String vin=p.getString("vin"),id=p.getString("requestId");org.json.JSONArray a=p.getJSONArray("bases");
+    if(!vin.matches("[A-HJ-NPR-Z0-9]{17}")||!id.matches("[A-Za-z0-9|_-]{1,180}")||a.length()<1||a.length()>100)return;
+    String[] bases=new String[a.length()];for(int n=0;n<a.length();n++){bases[n]=a.getString(n);if(!bases[n].matches("[0-9][A-Z0-9]{3,7}"))return;}
+    runOnUiThread(()->startActivityForResult(new Intent(MainActivity.this,EpcActivity.class).putExtra("vin",vin).putExtra("requestId",id).putExtra("bases",bases),EPC_LOOKUP));
+   }catch(Exception e){runOnUiThread(()->toast("Unable to open the EPC lookup."));}
+  }
+  @JavascriptInterface public String getEpcResult(){return getSharedPreferences("epc-results",MODE_PRIVATE).getString("pending","");}
+  @JavascriptInterface public void acknowledgeEpcResult(){getSharedPreferences("epc-results",MODE_PRIVATE).edit().remove("pending").apply();}
   @JavascriptInterface public void decodeVin(String vin,String year,String id){
    if(vin==null||!vin.matches("[A-HJ-NPR-Z0-9]{17}")||year==null||!year.matches("(?:[0-9]{4})?")||id==null||!id.matches("[0-9-]{1,40}"))return;
    decoderExecutor.execute(()->{
@@ -104,10 +115,11 @@ public class MainActivity extends Activity {
  }
  @Override protected void onActivityResult(int request,int result,Intent data){
   super.onActivityResult(request,result,data);
+  if(request==EPC_LOOKUP&&result==RESULT_OK&&data!=null){String selected=data.getStringExtra("selection");if(selected!=null&&selected.length()<12000){getSharedPreferences("epc-results",MODE_PRIVATE).edit().putString("pending",selected).apply();web.evaluateJavascript("window.dispatchEvent(new Event('parts-epc-result'));",null);}}
   if(request==PICK_FILE&&fileCallback!=null){fileCallback.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?new Uri[]{data.getData()}:null);fileCallback=null;}
   if(request==SAVE_FILE){String text=exportText;exportText=null;if(result==RESULT_OK&&text!=null&&data!=null&&data.getData()!=null){try(OutputStream stream=getContentResolver().openOutputStream(data.getData())){if(stream==null)throw new java.io.IOException();stream.write(text.getBytes(StandardCharsets.UTF_8));toast("File saved.");}catch(Exception e){toast("The file could not be saved.");}}}
  }
  @Override public void onBackPressed(){web.evaluateJavascript("(()=>{const d=document.querySelector('dialog[open]');if(d){d.close();return true;}return false;})()",value->{if(!"true".equals(value)){if(web.canGoBack())web.goBack();else super.onBackPressed();}});}
  @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);web.saveState(state);}
- @Override protected void onDestroy(){decoderExecutor.shutdownNow();if(fileCallback!=null)fileCallback.onReceiveValue(null);web.removeJavascriptInterface("PartsNative");web.destroy();super.onDestroy();}
+ @Override protected void onDestroy(){decoderExecutor.shutdownNow();if(fileCallback!=null)fileCallback.onReceiveValue(null);if(printWeb!=null)printWeb.destroy();web.removeJavascriptInterface("PartsNative");web.destroy();super.onDestroy();}
 }

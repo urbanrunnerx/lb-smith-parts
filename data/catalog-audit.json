@@ -1,9 +1,9 @@
 {
   "stats": {
     "baseNumbers": 15700,
-    "partFamilies": 2441,
-    "detailedFamilies": 2094,
-    "broadFamilies": 347,
+    "partFamilies": 2436,
+    "detailedFamilies": 1992,
+    "broadFamilies": 444,
     "packagingBases": 15171,
     "legacyBases": 690,
     "epcBases": 1246,
@@ -11,15 +11,15 @@
     "sourceServiceRows": 200239,
     "categories": {
       "Body & interior": 574,
-      "Brakes": 144,
+      "Brakes": 143,
       "Climate control": 187,
       "Electrical": 315,
       "Engine & cooling": 300,
-      "Exhaust & chassis": 109,
-      "Fuel & emissions": 232,
-      "Steering & suspension": 177,
-      "Transmission & driveline": 318,
-      "Wheels & tires": 85
+      "Exhaust & chassis": 110,
+      "Fuel & emissions": 231,
+      "Steering & suspension": 175,
+      "Transmission & driveline": 317,
+      "Wheels & tires": 84
     }
   },
   "sourceSha256": "08f94c232aa471c80ecf975aaeb3abee4696b59c8b18b81bc4357e46c5dc1208",

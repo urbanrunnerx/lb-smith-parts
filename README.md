@@ -6,10 +6,10 @@ An offline Ford base-number reference for a parts-department employee. Search a 
 
 ## Included catalog
 
-- **15,700 distinct exact base numbers**, grouped into 2,441 named families and broad reference groups.
+- **15,700 distinct exact base numbers**, grouped into 2,436 named families and broad reference groups.
 - 15,171 bases from 200,239 conventional Ford/Motorcraft service-part records in the publicly offered packaging CSV, downloaded September 17, 2026.
 - Preserves the prior 690-base historical reference and 1,246 distinct bases from saved EPC observations; the union adds 529 bases beyond the packaging snapshot.
-- 2,094 families have more specific names; 347 groups retain broad source descriptions. A broad group such as an engine cover can contain different components. Open the source evidence before selecting a service part.
+- 1,992 families have more specific names; 444 groups retain broad source descriptions. Round 2 classifies generic descriptions more conservatively. A broad group can contain different components. Open the source evidence before selecting a service part.
 - Count excluding two-digit body-style prefixes for comparison: **8,947**. This diagnostic is not used to alter or infer a service number.
 - Leading zeros and seven/eight-character body bases are preserved. Service prefixes, suffixes, trim variants and duplicate source rows do not count as new bases.
 
@@ -23,12 +23,26 @@ Search **purge valve** → one **EVAP purge valve** card, with **9C915** and **9
 
 - Saved parts, recent searches, grid/list views and light/dark themes.
 - Per-part notes for bin locations and reminders.
-- Counter worksheet with job/RO, vehicle/VIN note, quantities and confirmed service-number notes.
+- Job desk with separate vehicles, job/RO references, quantities, counter notes and selected full service numbers. VIN changes mark earlier selections for rechecking.
+- Assisted Snap-on EPC view on Android: load your job VIN, search a selected base, open the relevant illustration, review visible service numbers, and return an employee-selected number to the correct job.
+- Copy, print or export a job; mark it done or reopen it. Backups include all jobs, selected parts and the VIN decoder cache. Existing v1 worksheets, notes and saved parts migrate on upgrade.
 - Native clipboard copy, CSV exports, CSV reference imports and JSON workspace backup/restore.
 - Full-number breakdown; example service-number matching and conservative compact decoding.
-- Offline catalog bundled in the APK. No login, app server, analytics or ads. Internet is used only for an explicitly requested new VIN decode. Source links open in the system browser.
+- Offline catalog bundled in the APK. The local reference needs no login. Online VIN decoding uses NHTSA vPIC; EPC lookups require internet and your own Snap-on account. Source links open in the system browser. No app server, analytics or ads.
 
 Browser and Android storage are separate. Back up the workspace before reinstalling or changing devices. The integrated VIN Decoder uses the official NHTSA vPIC service online for vehicle identity and manufacturer-reported specifications. It validates VIN format/check digit, accepts an optional model-year hint, displays source warnings, and caches the last 15 decoded vehicles for offline access. Missing fields remain unknown. It does not infer factory equipment, live prices, inventory, availability, supersessions or VIN fitment.
+
+## VIN to service part
+
+1. Create or open a job and enter its VIN.
+2. Find a family and choose **Find service part by VIN**. Choose the appropriate base.
+3. Open assisted EPC and sign in yourself. The phone has its own catalog session; your desktop login does not transfer.
+4. Tap **Load VIN**, wait for the requested vehicle, then **Search**. Keep EPC VIN filters enabled. Open the appropriate position/component illustration using EPC's controls.
+5. Tap **Review parts**, choose a visible service number, check restrictions and current supersessions, and select **Use this part**. It returns to the originating job with VIN, base, context and source.
+
+This is an assisted browser workflow, not a licensed Snap-on API integration or automatic fitment decision. It reads visible catalog rows only and stops if the active VIN or VIN filters do not match. If the catalog page changes or blocks the embedded browser, use the browser/manual entry option. Each Android installation still needs its own successful account login and catalog check. The page adapter is tested against a representative fixture; authenticated Android operation must be verified with your account.
+
+The browser version opens Snap-on separately and lets the employee record a reviewed number. The app does not send orders or write to CDK. Snap-on's documented CDK integration requires its supported local services/configuration on the counter workstation; see [Snap-on integration setup](https://docs.snaponbusinesssolutions.com/docs/EPC5Help/Ford/EPC5_Help_en-US/Content/ConfiguringIntegration.htm). Job copy/CSV is a handoff aid, not a CDK import contract.
 
 ## Android installation and builds
 
@@ -36,7 +50,7 @@ Android 8.0+ with a current Android System WebView. Download `LB-Smith-Parts.apk
 
 GitHub Actions runs the catalog/search tests, checks catalog reproducibility, builds Android APKs, runs Android lint and an emulator smoke test. Workflow artifacts include an **unsigned release** APK and a **debug test** APK. Only the signed APK attached to a release is the intended user download. Debug APK signatures can change between runs; do not install a debug APK over the signed release.
 
-The first release is signed locally. Keep the release signing key and password private and backed up; they are deliberately excluded from this repository. Future releases must use the same key and a larger `versionCode`. Sign an unsigned APK with Android SDK `apksigner`, verify it, then attach it to the GitHub release with the name `LB-Smith-Parts.apk`.
+Releases are signed locally with the same private key. Keep the release signing key and password private and backed up; they are deliberately excluded from this repository. Install updates over the existing release to retain its local workspace. Future releases must use the same key and a larger `versionCode`. Sign an unsigned APK with Android SDK `apksigner`, verify it, then attach it to the GitHub release with the name `LB-Smith-Parts.apk`.
 
 Local build requirements: JDK 17, Gradle 8.13, Android SDK 35/build-tools 35.0.0.
 

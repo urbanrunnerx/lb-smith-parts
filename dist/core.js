@@ -1,6 +1,6 @@
 export const normalize = text => String(text ?? '').toLowerCase().replace(/a\/c/g,'ac').replace(/vapour/g,'vapor').replace(/moulding/g,'molding').replace(/[^a-z0-9]+/g,' ').trim();
 export const validBase = value => /^[0-9][A-Z0-9]{3,7}$/.test(value);
-const synonyms = {aircon:'ac',windscreen:'windshield',bonnet:'hood',tyre:'tire',stabiliser:'stabilizer',petrol:'gasoline'};
+const synonyms = {aircon:'ac',windscreen:'windshield',bonnet:'hood',tyre:'tire',stabiliser:'stabilizer',petrol:'gasoline',trans:'transmission',light:'lamp',lights:'lamp',lamps:'lamp'};
 const stop = new Set('the a an for of part parts ford my on in with is that it need to assembly assy please find me i want number base'.split(' '));
 const tokens = q => normalize(q).split(' ').filter(t=>t&&!stop.has(t)).map(t=>synonyms[t]||t);
 export function hydrate(part){
@@ -46,11 +46,12 @@ export function search(query,index,{category='All systems',quality='all',saved=n
   else if(parsed){continue;}
   else if(/^[0-9][A-Z0-9]*$/.test(code)&&p.codes.some(b=>b.startsWith(code))){score=5000;reason='Base starts with '+code;matched=p.codes.filter(b=>b.startsWith(code));}
   else if(qt.length){
-   let fuzzy=false,hit=true;
+   let fuzzy=false,hit=true,positionUnresolved=false;
    for(const t of qt){
     if(p.words.has(t))score+=60;
     else if(t.length>=3&&[...p.words].some(w=>w.startsWith(t)))score+=35;
     else if(t.length>=5&&[...p.words].some(w=>near(w,t))){score+=15;fuzzy=true;}
+    else if(['left','right','front','rear','driver','passenger'].includes(t)){positionUnresolved=true;score-=25;}
     else {hit=false;break;}
    }
    if(!hit)continue;
@@ -58,7 +59,8 @@ export function search(query,index,{category='All systems',quality='all',saved=n
    else if(p.title.includes(q))score+=300;
    score+=qt.filter(t=>p.title.split(' ').includes(t)).length*30;
    score-=p.broad?100:0;
-   reason=fuzzy?'Similar wording':'Name or synonym match';
+   if(!qt.some(t=>!['left','right','front','rear','driver','passenger'].includes(t)))continue;
+   reason=positionUnresolved?'Family match · confirm position in EPC':fuzzy?'Similar wording':'Name or synonym match';
   }else continue;
   results.push({part:p,score,reason,matched});
  }
