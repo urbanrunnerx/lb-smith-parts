@@ -7,7 +7,9 @@ import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.webkit.WebView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -15,6 +17,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,11 +35,48 @@ public class GuidedLookupTest {
   }
  }
 
+ private static <T extends Activity> boolean previewReady(ActivityScenario<T> scenario,String name){
+  AtomicBoolean ready=new AtomicBoolean();
+  scenario.onActivity(a->{
+   View root=a.getWindow().getDecorView();
+   View target=name.equals("guided-choices.png")?root.findViewWithTag("guided-choices"):name.equals("guided-parts.png")?root.findViewWithTag("guided-parts"):root;
+   ready.set(target!=null&&target.isShown()&&target.isLaidOut()&&target.getWidth()>0&&target.getHeight()>0);
+  });
+  return ready.get();
+ }
+
+ private static <T extends Activity> void awaitPreviewPaint(ActivityScenario<T> scenario,String name)throws Exception{
+  if(name.equals("snapon-menu.png")){
+   CountDownLatch visualState=new CountDownLatch(1);
+   scenario.onActivity(a->((MainActivity)a).getWebView().postVisualStateCallback(System.nanoTime(),new WebView.VisualStateCallback(){
+    @Override public void onComplete(long requestId){visualState.countDown();}
+   }));
+   assertTrue("The selected part family must reach WebView's render state",visualState.await(10,TimeUnit.SECONDS));
+  }
+  long deadline=System.currentTimeMillis()+15000;
+  while(System.currentTimeMillis()<deadline){
+   if(!previewReady(scenario,name)){Thread.sleep(100);continue;}
+   CountDownLatch painted=new CountDownLatch(1);
+   scenario.onActivity(a->{
+    View root=a.getWindow().getDecorView();
+    // Message-queue idle can precede rendering. Wait for a submitted frame, then presentation frames.
+    Runnable committed=()->root.postOnAnimation(()->root.postOnAnimation(painted::countDown));
+    if(Build.VERSION.SDK_INT>=29&&root.isHardwareAccelerated()){
+     root.getViewTreeObserver().registerFrameCommitCallback(committed);root.invalidate();
+    }else root.postOnAnimation(committed);
+   });
+   assertTrue("The preview must have a committed display frame",painted.await(10,TimeUnit.SECONDS));
+   if(previewReady(scenario,name))return;
+  }
+  fail("Expected preview content was not visibly laid out: "+name);
+ }
+
  static <T extends Activity> void savePreview(ActivityScenario<T> scenario,String name)throws Exception{
   AtomicReference<File> destination=new AtomicReference<>();
   scenario.onActivity(a->destination.set(new File(a.getExternalFilesDir(null),"preview/"+name)));
   File file=destination.get();assertTrue(file.getParentFile().isDirectory()||file.getParentFile().mkdirs());
   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+  awaitPreviewPaint(scenario,name);
   Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull("Emulator screenshot failed",bitmap);
   try(FileOutputStream out=new FileOutputStream(file)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}finally{bitmap.recycle();}
   // CI uninstalls the test app after execution; export fixture previews before that cleanup.

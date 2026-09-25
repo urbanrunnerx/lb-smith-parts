@@ -80,7 +80,7 @@ public class SnapOnMenuTest {
    assertEquals("true",js(scenario,"document.querySelector('#snaponMatches').textContent.includes('9C915') && document.querySelector('#snaponMatches').textContent.includes('9D289')"));
    js(scenario,"document.querySelector('[data-snap-match]').click()");
    assertEquals("true",js(scenario,"[...document.querySelector('#snaponBase').options].some(o=>o.value==='9C915') && [...document.querySelector('#snaponBase').options].some(o=>o.value==='9D289')"));
-   js(scenario,"document.querySelector('#snaponVin').value='"+EpcAdapterTest.VIN+"'");
+   js(scenario,"document.querySelector('#snaponVin').value='"+EpcAdapterTest.VIN+"';document.querySelector('#snaponSelected').scrollIntoView({block:'nearest'})");
    GuidedLookupTest.savePreview(scenario,"snapon-menu.png");
    js(scenario,"document.querySelector('#snaponVin').value='INVALID';document.querySelector('#snaponLaunch').click()");
    assertEquals("true",js(scenario,"document.querySelector('#snaponStatus').textContent.includes('17-character VIN')"));
