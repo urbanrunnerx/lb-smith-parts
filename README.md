@@ -24,7 +24,8 @@ Search **purge valve** → one **EVAP purge valve** card, with **9C915** and **9
 - Saved parts, recent searches, grid/list views and light/dark themes.
 - Per-part notes for bin locations and reminders.
 - Job desk with separate vehicles, job/RO references, quantities, counter notes and selected full service numbers. VIN changes mark earlier selections for rechecking.
-- Assisted Snap-on EPC view on Android: load your job VIN, search a selected base, open the relevant illustration, review visible service numbers, and return an employee-selected number to the correct job.
+- Dedicated Snap-on menu: enter a VIN and search a common part name with the same offline family index. Choose the family and starting base; a different VIN opens its own job.
+- Native guided Snap-on lookup on Android: VIN/base load after sign-in, with dropdowns for available locations, systems, sections and illustrations. Review application/date/quantity cards and return an employee-selected service number to the correct job.
 - Copy, print or export a job; mark it done or reopen it. Backups include all jobs, selected parts and the VIN decoder cache. Existing v1 worksheets, notes and saved parts migrate on upgrade.
 - Native clipboard copy, CSV exports, CSV reference imports and JSON workspace backup/restore.
 - Full-number breakdown; example service-number matching and conservative compact decoding.
@@ -34,13 +35,18 @@ Browser and Android storage are separate. Back up the workspace before reinstall
 
 ## VIN to service part
 
-1. Create or open a job and enter its VIN.
-2. Find a family and choose **Find service part by VIN**. Choose the appropriate base.
-3. Open assisted EPC and sign in yourself. The phone has its own catalog session; your desktop login does not transfer.
-4. Tap **Load VIN**, wait for the requested vehicle, then **Search**. Keep EPC VIN filters enabled. Open the appropriate position/component illustration using EPC's controls.
-5. Tap **Review parts**, choose a visible service number, check restrictions and current supersessions, and select **Use this part**. It returns to the originating job with VIN, base, context and source.
+1. Open **Snap-on**. Enter the VIN and a common part description, synonym, base or service number.
+2. Choose a matching family. Alternate bases stay together; choose the base to try first.
+3. Tap **Find in integrated Snap-on**. Sign in on the phone through **Catalog / sign in** when needed; the desktop login does not transfer.
+4. The app loads the VIN and searches the selected base. Use **Find parts** to retry or search another base. Keep VIN filters enabled.
+5. Choose from the native location, system, section or illustration dropdowns. Tap **Open selection** to navigate. The catalog path lets you return to an earlier section.
+6. Review service-part cards with the application, restrictions, build dates and quantity. Tap **Review this part**, then **Save to job**. The adapter checks the current VIN, base, catalog path and displayed part again before saving.
 
-This is an assisted browser workflow, not a licensed Snap-on API integration or automatic fitment decision. It reads visible catalog rows only and stops if the active VIN or VIN filters do not match. If the catalog page changes or blocks the embedded browser, use the browser/manual entry option. Each Android installation still needs its own successful account login and catalog check. The page adapter is tested against a representative fixture; authenticated Android operation must be verified with your account.
+Existing family details and job rows also open this guided lookup. **Catalog / sign in** exposes the original catalog for authentication, diagrams or unsupported screens; **Guided lookup** returns to the app controls. **Load more catalog results** advances the rendered rows when the catalog uses a scrolling grid.
+
+The interface reads the rendered page in an isolated Snap-on session. It is not a licensed Snap-on API integration or automatic fitment decision. Credentials are entered only on the original sign-in page and are not read by the adapter. Native choices are taken from recognized catalog navigation controls; ordering, picklist and CDK controls are not driven by the adapter. If the catalog changes or rejects its embedded session, the app shows an explicit catalog fallback. Lists represent rendered rows, not an exhaustive fitment result.
+
+The selectors were checked against an employee-authorized browser session. Automated Android tests use synthetic catalog fixtures; authenticated Android operation still needs verification with the employee's phone session. No private vehicle or newly accessed catalog records from that inspection are shipped in the source.
 
 The browser version opens Snap-on separately and lets the employee record a reviewed number. The app does not send orders or write to CDK. Snap-on's documented CDK integration requires its supported local services/configuration on the counter workstation; see [Snap-on integration setup](https://docs.snaponbusinesssolutions.com/docs/EPC5Help/Ford/EPC5_Help_en-US/Content/ConfiguringIntegration.htm). Job copy/CSV is a handoff aid, not a CDK import contract.
 
@@ -48,7 +54,7 @@ The browser version opens Snap-on separately and lets the employee record a revi
 
 Android 8.0+ with a current Android System WebView. Download `LB-Smith-Parts.apk` from the release, open it, allow installation for the downloading browser/file manager if prompted, then install.
 
-GitHub Actions runs the catalog/search tests, checks catalog reproducibility, builds Android APKs, runs Android lint and an emulator smoke test. Workflow artifacts include an **unsigned release** APK and a **debug test** APK. Only the signed APK attached to a release is the intended user download. Debug APK signatures can change between runs; do not install a debug APK over the signed release.
+GitHub Actions runs the catalog/search tests, checks catalog reproducibility, builds Android APKs, runs Android lint and Android emulator tests for the offline app, guided controls and catalog adapter. Workflow artifacts include an **unsigned release** APK and a **debug test** APK. Only the signed APK attached to a release is the intended user download. Debug APK signatures can change between runs; do not install a debug APK over the signed release.
 
 Releases are signed locally with the same private key. Keep the release signing key and password private and backed up; they are deliberately excluded from this repository. Install updates over the existing release to retain its local workspace. Future releases must use the same key and a larger `versionCode`. Sign an unsigned APK with Android SDK `apksigner`, verify it, then attach it to the GitHub release with the name `LB-Smith-Parts.apk`.
 

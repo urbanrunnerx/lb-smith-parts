@@ -97,6 +97,7 @@ $('#query').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{l
 $('#clear').onclick=()=>{$('#query').value='';limit=24;render();$('#query').focus();};
 for(const id of ['category','quality','sort'])$('#'+id).onchange=()=>{limit=24;render();};
 $('#more').onclick=()=>{limit+=24;render();};$('#reset').onclick=resetFilters;
+$('#snaponButton').onclick=$('#mobileSnapon').onclick=()=>counter.openSnapOn();
 $('#jobsButton').onclick=()=>counter.openJobs();$('#mobileJobs').onclick=()=>counter.openJobs();$('#vinDecoder').onclick=showVin;$('#coverage').onclick=$('#coverageInline').onclick=()=>catalog&&showCoverage();$('#tools').onclick=$('#mobileTools').onclick=()=>catalog&&showTools();
 $('#theme').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;save('theme',t);};
 function layout(list){$('#results').classList.toggle('list',list);$('#gridView').classList.toggle('selected',!list);$('#listView').classList.toggle('selected',list);$('#gridView').setAttribute('aria-pressed',!list);$('#listView').setAttribute('aria-pressed',list);save('layout',list);}

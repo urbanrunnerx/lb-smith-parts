@@ -83,7 +83,8 @@ public class MainActivity extends Activity {
    try{JSONObject p=new JSONObject(payload);String vin=p.getString("vin"),id=p.getString("requestId");org.json.JSONArray a=p.getJSONArray("bases");
     if(!vin.matches("[A-HJ-NPR-Z0-9]{17}")||!id.matches("[A-Za-z0-9|_-]{1,180}")||a.length()<1||a.length()>100)return;
     String[] bases=new String[a.length()];for(int n=0;n<a.length();n++){bases[n]=a.getString(n);if(!bases[n].matches("[0-9][A-Z0-9]{3,7}"))return;}
-    runOnUiThread(()->startActivityForResult(new Intent(MainActivity.this,EpcActivity.class).putExtra("vin",vin).putExtra("requestId",id).putExtra("bases",bases),EPC_LOOKUP));
+    String partName=p.optString("partName","Service part lookup");if(partName.length()>160)partName=partName.substring(0,160);final String title=partName;
+    runOnUiThread(()->startActivityForResult(new Intent(MainActivity.this,EpcActivity.class).putExtra("vin",vin).putExtra("requestId",id).putExtra("bases",bases).putExtra("partName",title),EPC_LOOKUP));
    }catch(Exception e){runOnUiThread(()->toast("Unable to open the EPC lookup."));}
   }
   @JavascriptInterface public String getEpcResult(){return getSharedPreferences("epc-results",MODE_PRIVATE).getString("pending","");}
