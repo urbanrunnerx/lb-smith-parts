@@ -54,7 +54,7 @@ jobs:
           disable-animations: true
           script: |
             gradle :android:app:connectedDebugAndroidTest --no-daemon
-            adb pull /sdcard/Android/data/net.lbsmith.parts/files/preview android/app/build/reports/preview || true
+            adb pull /sdcard/Download/lbsmith-preview android/app/build/reports/preview
       - uses: actions/upload-artifact@v4
         if: always()
         with:

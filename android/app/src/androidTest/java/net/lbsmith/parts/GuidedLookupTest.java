@@ -1,16 +1,20 @@
 package net.lbsmith.parts;
 
+import android.app.Activity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.graphics.Bitmap;
+import android.os.ParcelFileDescriptor;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,13 +23,27 @@ import static org.junit.Assert.*;
 /** Exercises the employee-facing native screen against synthetic catalog HTML. */
 @RunWith(AndroidJUnit4.class)
 public class GuidedLookupTest {
- private static void savePreview(ActivityScenario<EpcActivity> scenario,String name)throws Exception{
+ private static String shell(String command)throws Exception{
+  ParcelFileDescriptor descriptor=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);
+  try(InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(descriptor);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+   byte[] buffer=new byte[4096];int count;while((count=in.read(buffer))!=-1)out.write(buffer,0,count);return out.toString("UTF-8").trim();
+  }
+ }
+
+ static <T extends Activity> void savePreview(ActivityScenario<T> scenario,String name)throws Exception{
   AtomicReference<File> destination=new AtomicReference<>();
   scenario.onActivity(a->destination.set(new File(a.getExternalFilesDir(null),"preview/"+name)));
   File file=destination.get();assertTrue(file.getParentFile().isDirectory()||file.getParentFile().mkdirs());
   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
   Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull("Emulator screenshot failed",bitmap);
   try(FileOutputStream out=new FileOutputStream(file)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}finally{bitmap.recycle();}
+  // CI uninstalls the test app after execution; export fixture previews before that cleanup.
+  assertTrue(name.matches("(?:guided-(?:choices|parts)|snapon-menu)\\.png"));
+  String shared="/sdcard/Download/lbsmith-preview/"+name;
+  shell("mkdir -p /sdcard/Download/lbsmith-preview");
+  shell("cp "+file.getAbsolutePath()+" "+shared);
+  String copied=shell("wc -c "+shared);
+  assertTrue("The fixture preview must survive app uninstall: "+copied,copied.matches(file.length()+"\\s+.*"));
  }
 
  private static String nativeText(View view){
