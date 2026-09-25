@@ -37,13 +37,29 @@ public class SnapOnMenuTest {
  }
 
  private static void reload(ActivityScenario<MainActivity> scenario)throws Exception{
+  reload(scenario,"15,700");
+ }
+
+ private static void reload(ActivityScenario<MainActivity> scenario,String baseCount)throws Exception{
   js(scenario,"window.__beforeReload=true;location.reload()");
-  until(scenario,"window.__beforeReload===undefined && document.querySelector('#baseCount')?.textContent==='15,700'","true");
+  until(scenario,"window.__beforeReload===undefined && document.querySelector('#baseCount')?.textContent==='"+baseCount+"'","true");
  }
 
  private static JSONObject stored(ActivityScenario<MainActivity> scenario,String key)throws Exception{
   Object value=new JSONTokener(js(scenario,"localStorage.getItem('lbsmith-parts-v1-"+key+"')")).nextValue();
   return new JSONObject(String.valueOf(value));
+ }
+
+ private static JSONObject activeJob(JSONObject book)throws Exception{
+  JSONArray jobs=book.getJSONArray("items");for(int n=0;n<jobs.length();n++){JSONObject job=jobs.getJSONObject(n);if(job.getString("id").equals(book.getString("activeId")))return job;}
+  throw new AssertionError("The active job must be present");
+ }
+
+ private static JSONObject awaitRequest(RecordingBridge bridge,int calls)throws Exception{
+  long deadline=System.currentTimeMillis()+10000;while(bridge.calls.get()<calls&&System.currentTimeMillis()<deadline)Thread.sleep(50);
+  assertEquals("The valid request should reach the native bridge",calls,bridge.calls.get());assertNotNull(bridge.payload.get());
+  JSONObject payload=new JSONObject(bridge.payload.get());String id=payload.getString("requestId");
+  assertTrue("Request IDs must fit native validation",id.length()<=180&&id.matches("[A-Za-z0-9|_-]+"));return payload;
  }
 
  @Test public void snapOnMenuGroupsCommonNamesAndValidatesBeforeNativeLookup()throws Exception{
@@ -71,9 +87,7 @@ public class SnapOnMenuTest {
    assertEquals("null",js(scenario,"localStorage.getItem('lbsmith-parts-v1-epc-pending')"));
 
    js(scenario,"document.querySelector('#snaponVin').value='"+EpcAdapterTest.VIN+"';document.querySelector('#snaponBase').value='9D289';document.querySelector('#snaponLaunch').click()");
-   long deadline=System.currentTimeMillis()+10000;while(bridge.payload.get()==null&&System.currentTimeMillis()<deadline)Thread.sleep(50);
-   assertNotNull("The valid menu request should reach the native bridge",bridge.payload.get());assertEquals(1,bridge.calls.get());
-   JSONObject payload=new JSONObject(bridge.payload.get());assertEquals(EpcAdapterTest.VIN,payload.getString("vin"));
+   JSONObject payload=awaitRequest(bridge,1);assertEquals(EpcAdapterTest.VIN,payload.getString("vin"));
    assertEquals("9D289",payload.getJSONArray("bases").getString(0));assertTrue(payload.getJSONArray("bases").toString().contains("9C915"));
    assertTrue(payload.getString("partName").toLowerCase().contains("purge"));
    JSONObject book=stored(scenario,"jobs");JSONArray jobs=book.getJSONArray("items");assertEquals(2,jobs.length());
@@ -84,10 +98,48 @@ public class SnapOnMenuTest {
    JSONObject pending=stored(scenario,"epc-pending");assertEquals(payload.getString("requestId"),pending.getString("id"));
    assertEquals(active.getString("id"),pending.getString("jobId"));assertEquals("9D289",pending.getString("base"));
 
+   // Model a saved job created before this family's current base list was expanded.
+   String oldJobId=active.getString("id");
+   js(scenario,"(()=>{const book=JSON.parse(localStorage.getItem('lbsmith-parts-v1-jobs'));const job=book.items.find(j=>j.id===book.activeId);const row=job.rows[0];row.bases=['9C915'];row.qty=7;row.note='Keep updated counter note';row.selection={vin:job.vin,base:'9C915',serviceNumber:'TEST-9C915-A',source:'Synthetic fixture',stale:false};localStorage.setItem('lbsmith-parts-v1-jobs',JSON.stringify(book));localStorage.setItem('lbsmith-parts-v1-worksheet',JSON.stringify(job));})()");
+   reload(scenario);
+   js(scenario,"document.querySelector('#snaponButton').click();document.querySelector('[data-snap-query=\"purge valve\"]').click();document.querySelector('[data-snap-match]').click();document.querySelector('#snaponBase').value='9D289';document.querySelector('#snaponLaunch').click()");
+   payload=awaitRequest(bridge,2);assertEquals("9D289",payload.getJSONArray("bases").getString(0));
+   book=stored(scenario,"jobs");active=activeJob(book);assertEquals("Same-VIN lookup should reuse its job",oldJobId,active.getString("id"));
+   assertEquals(2,book.getJSONArray("items").length());assertEquals(1,active.getJSONArray("rows").length());
+   JSONObject preserved=active.getJSONArray("rows").getJSONObject(0);
+   assertTrue("The saved row must accept the newly selected base on return",preserved.getJSONArray("bases").toString().contains("9D289"));
+   assertTrue(preserved.getJSONArray("bases").toString().contains("9C915"));assertEquals(7,preserved.getInt("qty"));
+   assertEquals("Keep updated counter note",preserved.getString("note"));assertEquals("TEST-9C915-A",preserved.getJSONObject("selection").getString("serviceNumber"));
+
    js(scenario,"document.querySelector('#info').close();document.querySelector('#mobileSnapon').click()");
    assertEquals(JSONObject.quote(EpcAdapterTest.VIN),js(scenario,"document.querySelector('#snaponVin').value"));
-   assertEquals("true",js(scenario,"document.querySelector('#snaponLaunch').disabled"));assertEquals(1,bridge.calls.get());
+   assertEquals("true",js(scenario,"document.querySelector('#snaponLaunch').disabled"));assertEquals(2,bridge.calls.get());
    js(scenario,"localStorage.clear()");reload(scenario);
+  }
+ }
+
+ @Test public void longImportedFamilyCanLaunchFromMenuAndExistingJob()throws Exception{
+  RecordingBridge bridge=new RecordingBridge();StringBuilder name=new StringBuilder("Fixture ");
+  for(int n=0;n<9;n++)name.append("extended reference ");String longName=name.append("part").toString();
+  assertTrue(longName.length()>160&&longName.length()<=200);
+  JSONArray imported=new JSONArray().put(new JSONObject().put("base","9TEST99").put("name",longName).put("category","Body & interior").put("aliases",new JSONArray().put("fixture custom lookup")).put("source",""));
+  try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
+   try{
+   until(scenario,"document.querySelector('#baseCount')?.textContent","\"15,700\"");
+   js(scenario,"localStorage.clear();localStorage.setItem('lbsmith-parts-v1-imports',JSON.stringify("+imported+"))");
+   scenario.onActivity(a->a.getWebView().addJavascriptInterface(bridge,"PartsNative"));reload(scenario,"15,701");
+   assertEquals("true",js(scenario,"PartsNative.isFixture()"));
+   js(scenario,"document.querySelector('#snaponButton').click();document.querySelector('#snaponVin').value='"+EpcAdapterTest.VIN+"';document.querySelector('#snaponQuery').value='9TEST99';document.querySelector('#snaponQuery').dispatchEvent(new Event('input',{bubbles:true}))");
+   assertEquals("1",js(scenario,"document.querySelectorAll('[data-snap-match]').length"));
+   js(scenario,"document.querySelector('[data-snap-match]').click();document.querySelector('#snaponLaunch').click()");
+   JSONObject fromMenu=awaitRequest(bridge,1);assertEquals(longName,fromMenu.getString("partName"));assertEquals("9TEST99",fromMenu.getJSONArray("bases").getString(0));
+   JSONObject row=activeJob(stored(scenario,"jobs")).getJSONArray("rows").getJSONObject(0);
+   assertTrue("This fixture should exercise a long imported family ID",row.getString("id").length()>180);
+   js(scenario,"document.querySelector('#info').close();document.querySelector('#activeJob').click();document.querySelector('[data-job-epc]').click();document.querySelector('#launchEpc').click()");
+   JSONObject fromJob=awaitRequest(bridge,2);assertEquals("9TEST99",fromJob.getJSONArray("bases").getString(0));
+   assertNotEquals("Each lookup needs its own request ID",fromMenu.getString("requestId"),fromJob.getString("requestId"));
+   JSONObject pending=stored(scenario,"epc-pending");assertEquals(row.getString("id"),pending.getString("rowId"));assertEquals(fromJob.getString("requestId"),pending.getString("id"));
+   }finally{js(scenario,"localStorage.clear()");reload(scenario);}
   }
  }
 }

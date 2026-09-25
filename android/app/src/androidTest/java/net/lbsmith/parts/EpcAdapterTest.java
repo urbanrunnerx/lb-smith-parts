@@ -55,9 +55,9 @@ public class EpcAdapterTest {
    +"<style>body{font:16px sans-serif}a,button,input,[role=gridcell],[role=columnheader]{display:block;min-height:24px}"
    +"[role=row]{display:flex}[role=gridcell],[role=columnheader]{min-width:100px}</style></head>"
    +"<body data-fixture='"+token+"'>"+contents+"</body></html>";
-  scenario.onActivity(a->{a.getWebView().stopLoading();a.getWebView().loadDataWithBaseURL("https://snaponepc.com/epc/",html,"text/html","UTF-8",null);});
+  scenario.onActivity(a->{a.getWebView().stopLoading();a.getWebView().loadDataWithBaseURL("https://snaponepc.com/epc/",html,"text/html","UTF-8","https://snaponepc.com/epc/");});
   long deadline=System.currentTimeMillis()+20000;String ready="";
-  while(System.currentTimeMillis()<deadline){ready=js(scenario,"document.body?.getAttribute('data-fixture')");if(JSONObject.quote(token).equals(ready))return;Thread.sleep(100);}
+  while(System.currentTimeMillis()<deadline){ready=js(scenario,"document.body?.getAttribute('data-fixture')");if(JSONObject.quote(token).equals(ready)){scenario.onActivity(a->assertEquals("Synthetic fixture must retain the trusted catalog origin","https://snaponepc.com/epc/",a.getWebView().getUrl()));return;}Thread.sleep(100);}
   assertEquals("Synthetic catalog fixture did not load",JSONObject.quote(token),ready);
  }
 
