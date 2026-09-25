@@ -56,9 +56,10 @@ public class EpcAdapterTest {
    +"[role=row]{display:flex}[role=gridcell],[role=columnheader]{min-width:100px}</style></head>"
    +"<body data-fixture='"+token+"'>"+contents+"</body></html>";
   scenario.onActivity(a->{a.getWebView().stopLoading();a.getWebView().loadDataWithBaseURL("https://snaponepc.com/epc/",html,"text/html","UTF-8","https://snaponepc.com/epc/");});
-  long deadline=System.currentTimeMillis()+20000;String ready="";
-  while(System.currentTimeMillis()<deadline){ready=js(scenario,"document.body?.getAttribute('data-fixture')");if(JSONObject.quote(token).equals(ready)){scenario.onActivity(a->assertEquals("Synthetic fixture must retain the trusted catalog origin","https://snaponepc.com/epc/",a.getWebView().getUrl()));return;}Thread.sleep(100);}
+  long deadline=System.currentTimeMillis()+20000;String ready="";AtomicReference<String> address=new AtomicReference<>();
+  while(System.currentTimeMillis()<deadline){ready=js(scenario,"document.body?.getAttribute('data-fixture')");scenario.onActivity(a->address.set(a.getWebView().getUrl()));if(JSONObject.quote(token).equals(ready)&&"https://snaponepc.com/epc/".equals(address.get()))return;Thread.sleep(100);}
   assertEquals("Synthetic catalog fixture did not load",JSONObject.quote(token),ready);
+  assertEquals("Synthetic fixture must finish navigating to the trusted catalog origin","https://snaponepc.com/epc/",address.get());
  }
 
  static String vehicle(String vin,boolean filters){

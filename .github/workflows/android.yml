@@ -52,9 +52,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            gradle :android:app:connectedDebugAndroidTest --no-daemon
-            adb pull /sdcard/Download/lbsmith-preview android/app/build/reports/preview
+          script: bash .github/scripts/android-tests.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
